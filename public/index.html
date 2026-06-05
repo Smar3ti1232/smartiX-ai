@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SmartiX AI</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Orbitron', sans-serif;
+}
+
+body{
+  background: radial-gradient(circle at top,#0f0c29,#302b63,#24243e);
+  color:white;
+  overflow-x:hidden;
+}
+
+.glow-bg{
+  position:fixed;
+  width:100%;
+  height:100%;
+  background: radial-gradient(circle, rgba(0,255,255,0.1), transparent 60%);
+  animation: move 6s infinite alternate;
+  z-index:-1;
+}
+
+@keyframes move{
+  from{transform:translateY(-20px);}
+  to{transform:translateY(20px);}
+}
+
+header{
+  text-align:center;
+  padding:20px;
+  font-size:24px;
+  font-weight:bold;
+  color:#00f7ff;
+}
+
+/* PROMPT PANEL */
+.prompt-panel{
+  width:90%;
+  max-width:800px;
+  margin:10px auto;
+  text-align:center;
+}
+
+.prompt-title{
+  font-size:12px;
+  color:#aaa;
+  margin-bottom:8px;
+}
+
+.chips{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:8px;
+}
+
+.chip{
+  padding:6px 10px;
+  background:rgba(0,255,255,0.08);
+  border:1px solid rgba(0,255,255,0.2);
+  border-radius:20px;
+  font-size:11px;
+  cursor:pointer;
+}
+
+.chip:hover{
+  background:#00f7ff;
+  color:black;
+}
+
+/* CHAT */
+.chat-container{
+  width:90%;
+  max-width:800px;
+  margin:20px auto;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  border-radius:20px;
+  padding:20px;
+}
+
+.messages{
+  height:400px;
+  overflow-y:auto;
+  padding:10px;
+}
+
+.msg{
+  margin:10px 0;
+  padding:10px;
+  border-radius:10px;
+  max-width:80%;
+}
+
+.user{
+  background:linear-gradient(45deg,#00f7ff,#7b2ff7);
+  margin-left:auto;
+}
+
+.bot{
+  background:rgba(255,255,255,0.1);
+}
+
+/* INPUT */
+.input-box{
+  display:flex;
+  margin-top:10px;
+}
+
+input{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  outline:none;
+}
+
+button{
+  margin-left:10px;
+  padding:12px 15px;
+  border:none;
+  border-radius:10px;
+  background:#00f7ff;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+/* POPUP */
+.popup{
+  position:fixed;
+  top:30%;
+  left:50%;
+  transform:translate(-50%,-30%);
+  background:rgba(0,0,0,0.85);
+  padding:30px;
+  border-radius:15px;
+  text-align:center;
+  box-shadow:0 0 25px cyan;
+  z-index:999;
+}
+
+.popup-btn{
+  margin-top:10px;
+  padding:12px 18px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(45deg,#00f7ff,#7b2ff7);
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="glow-bg"></div>
+
+<header>⚡ SmartiX AI</header>
+
+<!-- POPUP -->
+<div class="popup" id="popup">
+  <h2>⚡ SmartiX AI</h2>
+  <p>Ask anything • Create anything • Explore ideas</p>
+</div>
+
+<!-- PROMPTS -->
+<div class="prompt-panel">
+  <div class="prompt-title">✨ AI Idea Generator</div>
+  <div class="chips" id="chips"></div>
+</div>
+
+<!-- CHAT -->
+<div class="chat-container">
+  <div class="messages" id="messages"></div>
+
+  <div class="input-box">
+    <input id="input" placeholder="Ask something..." />
+    <button onclick="send()">Send</button>
+    <button onclick="startVoice()">🎤</button>
+  </div>
+</div>
+
+<script>
+function closePopup(){
+  document.getElementById("popup").style.display = "none";
+}
+
+/* AUTO CLOSE POPUP AFTER 5 SECONDS */
+setTimeout(() => {
+  const popup = document.getElementById("popup");
+  if (popup) popup.style.display = "none";
+}, 2000);
+
+/* PROMPTS */
+const promptSets = [
+  ["AI Startup Ideas", "Viral Hooks", "App Concepts", "Business Names"],
+  ["Instagram Bio", "YouTube Ideas", "Gaming Username", "Dark Quotes"],
+  ["Portfolio Ideas", "UI Inspiration", "Website Colors", "Hero Text"]
+];
+
+let index = 0;
+
+function loadChips(){
+  const chips = document.getElementById("chips");
+  chips.innerHTML = "";
+
+  promptSets[index].forEach(text=>{
+    const div = document.createElement("div");
+    div.className = "chip";
+    div.innerText = text;
+    div.onclick = ()=> fill(text);
+    chips.appendChild(div);
+  });
+
+  index = (index + 1) % promptSets.length;
+}
+
+function fill(text){
+  document.getElementById("input").value = text;
+}
+
+/* MESSAGES */
+function addMessage(text, type){
+  const msg = document.createElement("div");
+  msg.classList.add("msg", type);
+  msg.innerText = text;
+
+  const messages = document.getElementById("messages");
+  messages.appendChild(msg);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+/* SEND */
+function send(){
+  const input = document.getElementById("input");
+  const text = input.value;
+  if(!text) return;
+
+  addMessage(text, "user");
+  input.value="";
+  callGPT(text);
+}
+
+/* AI CALL */
+async function callGPT(userText){
+  addMessage("Thinking...", "bot");
+
+  try {
+    const response = await fetch("https://YOUR-APP.onrender.com/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: userText
+      })
+    });
+
+    const data = await response.json();
+    const reply = data.reply;
+
+    addMessage(reply, "bot");
+    speak(reply);
+
+  } catch (err) {
+    addMessage("Error connecting to AI ❌", "bot");
+  }
+}
+
+/* SPEECH */
+function speak(text){
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.lang = "en-US";
+  speech.rate = 1;
+  window.speechSynthesis.speak(speech);
+}
+
+/* VOICE */
+function startVoice(){
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if(!SpeechRecognition){
+    alert("Voice not supported");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+
+  recognition.start();
+
+  recognition.onresult = (event)=>{
+    const text = event.results[0][0].transcript;
+    document.getElementById("input").value = text;
+    send();
+  };
+}
+
+/* INIT */
+loadChips();
+setInterval(loadChips, 4000);
+</script>
+
+</body>
+</html>
